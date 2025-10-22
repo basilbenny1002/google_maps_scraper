@@ -79,10 +79,10 @@ def main():
     parser.add_argument("-s", "--search", type=str)
     parser.add_argument("-t", "--total", type=int)
     args = parser.parse_args()
-    
+
     if args.search:
         search_list = [args.search]
-        
+    
     if args.total:
         total = args.total
     else:
@@ -145,7 +145,6 @@ def main():
                     listings = page.locator(
                         '//a[contains(@href, "https://www.google.com/maps/place")]'
                     ).all()[:total]
-                    listings = [listing.locator("xpath=..") for listing in listings]
                     print(f"Total Scraped: {len(listings)}")
                     break
                 else:
@@ -181,21 +180,23 @@ def main():
                     listing.click()
                     page.wait_for_timeout(5000)
 
-                    name_attibute = 'aria-label'
+                    name_attribute = 'aria-label'
                     address_xpath = '//button[@data-item-id="address"]//div[contains(@class, "fontBodyMedium")]'
                     website_xpath = '//a[@data-item-id="authority"]//div[contains(@class, "fontBodyMedium")]'
                     phone_number_xpath = '//button[contains(@data-item-id, "phone:tel:")]//div[contains(@class, "fontBodyMedium")]'
                     review_count_xpath = '//button[@jsaction="pane.reviewChart.moreReviews"]//span'
                     reviews_average_xpath = '//div[@jsaction="pane.reviewChart.moreReviews"]//div[@role="img"]'
                     
-                    
                     business = Business()
-                   
-                    if len(listing.get_attribute(name_attibute)) >= 1:
-        
-                        business.name = listing.get_attribute(name_attibute)
+
+                    # Business name: prefer aria-label on the anchor; fallback to details title
+                    name_attr_val = listing.get_attribute(name_attribute)
+                    if name_attr_val:
+                        business.name = name_attr_val
                     else:
-                        business.name = ""
+                        # fallback from details panel
+                        title_loc = page.locator('//h1')
+                        business.name = title_loc.first.inner_text().strip() if title_loc.count() > 0 else ""
                     if page.locator(address_xpath).count() > 0:
                         business.address = page.locator(address_xpath).all()[0].inner_text()
                     else:
@@ -219,11 +220,16 @@ def main():
                         business.reviews_count = ""
                         
                     if page.locator(reviews_average_xpath).count() > 0:
-                        business.reviews_average = float(
-                            page.locator(reviews_average_xpath).get_attribute(name_attibute)
-                            .split()[0]
-                            .replace(',','.')
-                            .strip())
+                        avg_attr = page.locator(reviews_average_xpath).get_attribute(name_attribute)
+                        if avg_attr:
+                            try:
+                                business.reviews_average = float(
+                                    avg_attr.split()[0].replace(',', '.').strip()
+                                )
+                            except Exception:
+                                business.reviews_average = ""
+                        else:
+                            business.reviews_average = ""
                     else:
                         business.reviews_average = ""
                     
