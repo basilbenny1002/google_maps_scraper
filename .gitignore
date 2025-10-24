@@ -6,3 +6,4 @@ test.py
 page_text.txt
 meow.txt
 __pycache__/tools.cpython-312.pyc
+.env

@@ -21,6 +21,12 @@ Notes:
 """
 
 from __future__ import annotations
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()  # Load variables from .env file
+
 
 import re
 import os
@@ -46,22 +52,39 @@ USER_AGENT = (
 
 
 # ------------ Verification stub (customize me) ------------
-def verify_phone(number: int) -> bool:
-    """Return True if the given phone number (as an int) should be kept.
+API_KEY = os.getenv("API_KEY")
+API_URL = "https://phonevalidation.abstractapi.com/v1/?api_key={api_key}&phone={phone}"
 
-    This is a placeholder implementation. Customize this function with your
-    own business rules. Examples: validate length, country code, Luhn-like logic,
-    carrier checks, etc.
-    """
-    # Example naive rule: accept any integer that is at least 10 digits long
-    # (You can change this however you like.)
+API_KEY = os.getenv("API_KEY")
+API_URL = "https://api.phonevalidator.com/api/v3/phonesearch"
+
+def verify_phone(number: str) -> bool:
+    """Return True if the phone number is a cell phone and fake is 'NO'."""
+    if not API_KEY:
+        raise ValueError("API_KEY not set in environment variables")
+
     try:
-        # Count digits by converting back to string
-        return len(str(abs(int(number)))) >= 10
-    except Exception:
+        # Ensure number is a string and remove any non-numeric characters
+        number_str = ''.join(filter(str.isdigit, number))
+        
+        # Make API call
+        url = f"{API_URL}?apikey={API_KEY}&phone={number_str}&type=basic"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()["PhoneBasic"]
+        print(data)
+        
+        # Check conditions
+        phone_type = data.get("LineType", "").lower()   # e.g., 'cell phone'
+        is_fake = data.get("FakeNumber", "NO")          # assuming API returns 'NO' if not fake
+        
+        if phone_type == "cell phone" and is_fake == "NO":
+            return True
         return False
 
-
+    except Exception as e:
+        print(f"Error verifying number {number}: {e}")
+        return False
 # ------------ Helpers ------------
 
 def normalize_url(raw: str) -> Optional[str]:
@@ -263,6 +286,7 @@ def enrich_csv(input_csv: str = INPUT_CSV) -> str:
     return output_csv
 
 
-if __name__ == "__main__":
-    out = enrich_csv(INPUT_CSV)
-    print(f"Enriched CSV written to: {out}")
+# if __name__ == "__main__":
+#     # out = enrich_csv(INPUT_CSV)
+#     # print(f"Enriched CSV written to: {out}")
+#     print(verify_phone("+1111111111"))
