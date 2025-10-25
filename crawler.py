@@ -32,6 +32,7 @@ import re
 import os
 import math
 from typing import Callable, Iterable, List, Optional, Tuple
+from email_validator import validate_email, EmailNotValidError
 
 import pandas as pd
 import requests
@@ -263,8 +264,24 @@ def enrich_csv(input_csv: str = INPUT_CSV) -> str:
             # Comma-separated additional phones as requested
             addl_phones_col.append(", ".join(filtered[1:]))
 
-        # Email: first one if any
-        email_col.append(extracted_emails[0] if extracted_emails else "")
+        # Emails: validate, dedupe (case-insensitive), and join with comma
+        valid_emails: List[str] = []
+        seen_emails = set()
+        for em in extracted_emails:
+            em_str = (em or "").strip()
+            if not em_str:
+                continue
+            try:
+                info = validate_email(em_str, check_deliverability=True)
+                normalized = info.email.lower()
+            except EmailNotValidError:
+                continue
+            if normalized in seen_emails:
+                continue
+            seen_emails.add(normalized)
+            valid_emails.append(normalized)
+
+        email_col.append(", ".join(valid_emails) if valid_emails else "")
 
     # Attach new columns
     df["Phone"] = phones_col
