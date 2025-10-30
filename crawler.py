@@ -40,10 +40,11 @@ from urllib.parse import urlparse, urlunparse
 
 from tools import extract_contacts
 
+print("entering crawler.py")
 
 # ------------ Configuration ------------
 # Update this path to the CSV you want to enrich (use forward slashes for portability)
-INPUT_CSV = "output/google_maps_data_roofing_companies_in_houston_texas.csv"
+INPUT_CSV = r"output/google_maps_data_Roofing_Companies_in_Austin.csv"
 REQUEST_TIMEOUT_SECONDS = 20
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -53,38 +54,73 @@ USER_AGENT = (
 
 
 # ------------ Verification stub (customize me) ------------
-API_KEY = os.getenv("API_KEY")
-API_URL = "https://phonevalidation.abstractapi.com/v1/?api_key={api_key}&phone={phone}"
+# API_KEY = os.getenv("API_KEY")
+# API_URL = "https://phonevalidation.abstractapi.com/v1/?api_key={api_key}&phone={phone}"
 
 API_KEY = os.getenv("API_KEY")
-API_URL = "https://api.phonevalidator.com/api/v3/phonesearch"
+API_URL = "https://api.phone-check.xyz/v1-get-phone-details"
 
 def verify_phone(number: str) -> bool:
-    """Return True if the phone number is a cell phone and fake is 'NO'."""
+    """
+    Validate phone number using Phone-Check.xyz API.
+    Returns True only if:
+      ✅ valid number
+      ✅ mobile or mobile-capable
+      ❌ not disposable
+    """
     if not API_KEY:
-        raise ValueError("API_KEY not set in environment variables")
+        raise ValueError("PHONE_CHECK_API_KEY not set in environment variables")
 
-    try:
-        # Ensure number is a string and remove any non-numeric characters
-        number_str = ''.join(filter(str.isdigit, number))
-        
-        # Make API call
-        url = f"{API_URL}?apikey={API_KEY}&phone={number_str}&type=basic"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()["PhoneBasic"]
-        print(data)
-        
-        # Check conditions
-        phone_type = data.get("LineType", "").lower()   # e.g., 'cell phone'
-        is_fake = data.get("FakeNumber", "NO")          # assuming API returns 'NO' if not fake
-        
-        if phone_type == "cell phone" and is_fake == "NO":
-            return True
+    # Clean number (digits only)
+    number_str = ''.join(filter(str.isdigit, str(number)))
+    if not number_str:
         return False
 
+    try:
+        params = {
+            "phone": number_str,
+            "x-api-key": API_KEY
+        }
+
+        response = requests.get(API_URL, params=params, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+
+        print("Phone API result:", data)  # Debug info if you want logging
+
+        # API fields based on docs
+        is_valid = data.get("valid", False)
+        line_type = str(data.get("type", "")).lower()
+        disposable = data.get("isDisposable", False)
+
+        print(f"Valid: {is_valid}, Line Type: {line_type}, Disposable: {disposable}")
+
+        if not is_valid:
+            return False
+
+        if disposable:
+            return False
+
+        # Accept only proper mobile categories
+        if line_type in ("mobile", "fixed_line_or_mobile"):
+            return True
+
+        return False
+
+    except requests.RequestException as e:
+        print(f"API request error: {e}")
+        return False
     except Exception as e:
-        print(f"Error verifying number {number}: {e}")
+        print(f"Unexpected error: {e}")
+        return False
+
+
+    except requests.RequestException as e:
+        print(f"API request error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         return False
 # ------------ Helpers ------------
 
@@ -303,7 +339,7 @@ def enrich_csv(input_csv: str = INPUT_CSV) -> str:
     return output_csv
 
 
-# if __name__ == "__main__":
-#     # out = enrich_csv(INPUT_CSV)
-#     # print(f"Enriched CSV written to: {out}")
-#     print(verify_phone("+1111111111"))
+if __name__ == "__main__":
+    out = enrich_csv(INPUT_CSV)
+    print(f"Enriched CSV written to: {out}")
+    # print(verify_phone("+1 351-213-7734"))
