@@ -163,7 +163,7 @@ def main():
 
     # Hardcoded keywords
     keywords = [
-        # "roofing company",
+        "roofing company",
         "roofing contractor", 
         "roof repair",
         "roof replacement",
