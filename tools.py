@@ -160,12 +160,12 @@ async def fetch_page_text(url: str) -> str:
             pass
     
 
-if __name__ == "__main__":
-    url = "https://www.myroofimprovement.com/"
-    import requests
-    resp = requests.get(url=url).text
-    with open("page_text.txt", "w", encoding="utf-8") as f:
-        f.write(resp)
-    contacts = extract_contacts(resp)
-    print(json.dumps(contacts, indent=2))
+# if __name__ == "__main__":
+#     url = "https://www.myroofimprovement.com/"
+#     import requests
+#     resp = requests.get(url=url).text
+#     with open("page_text.txt", "w", encoding="utf-8") as f:
+#         f.write(resp)
+#     contacts = extract_contacts(resp)
+#     print(json.dumps(contacts, indent=2))
 

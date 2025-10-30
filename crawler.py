@@ -305,6 +305,8 @@ def enrich_csv(input_csv: str = INPUT_CSV) -> str:
         seen_emails = set()
         for em in extracted_emails:
             em_str = (em or "").strip()
+            if "sentry" in em_str.lower():
+                continue
             if not em_str:
                 continue
             try:
