@@ -212,15 +212,41 @@ def main():
     enriched_path = enrich_csv(temp_csv)
     print(f"Enriched data saved to {enriched_path}")
 
-    # Rename to city-based filename
-    city_filename = f"{city.replace(' ', '_')}_enriched.csv"
-    final_path = os.path.join("output", city_filename)
-    os.rename(enriched_path, final_path)
-    print(f"Final enriched file: {final_path}")
-
-    # Clean up temp file
+    # Load the enriched CSV to split and clean
+    df_enriched = pd.read_csv(enriched_path)
+    
+    # Remove unwanted columns
+    columns_to_remove = ['latitude', 'longitude', 'reviews_count', 'reviews_average']
+    df_enriched = df_enriched.drop(columns=[col for col in columns_to_remove if col in df_enriched.columns], errors='ignore')
+    
+    # Split into chunks of 80 rows
+    chunk_size = 80
+    total_rows = len(df_enriched)
+    num_chunks = (total_rows + chunk_size - 1) // chunk_size  # Ceiling division
+    
+    city_clean = city.replace(' ', '_')
+    
+    if num_chunks == 1:
+        # Single file, no suffix needed
+        final_path = os.path.join("output", f"{city_clean}_enriched.csv")
+        df_enriched.to_csv(final_path, index=False)
+        print(f"Final enriched file: {final_path}")
+    else:
+        # Multiple files with _1, _2, etc.
+        for i in range(num_chunks):
+            start_idx = i * chunk_size
+            end_idx = min((i + 1) * chunk_size, total_rows)
+            df_chunk = df_enriched.iloc[start_idx:end_idx]
+            
+            final_path = os.path.join("output", f"{city_clean}_enriched_{i+1}.csv")
+            df_chunk.to_csv(final_path, index=False)
+            print(f"Final enriched file {i+1}/{num_chunks}: {final_path} ({len(df_chunk)} rows)")
+    
+    # Clean up temp files
     if os.path.exists(temp_csv):
         os.remove(temp_csv)
+    if os.path.exists(enriched_path):
+        os.remove(enriched_path)
 
 if __name__ == "__main__":
     main()
