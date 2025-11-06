@@ -152,15 +152,13 @@ def scrape_for_search(search_for: str, total: int = 1000) -> BusinessList:
     
     return business_list
 
-def main():
-    parser = argparse.ArgumentParser(description="Scrape and enrich roofing companies data for a given city.")
-    parser.add_argument("-c", "--city", type=str, required=True, help="City name to search in")
-    parser.add_argument("-t", "--total", type=int, default=100, help="Maximum number of listings to scrape per keyword (default: 100)")
-    args = parser.parse_args()
-
-    city = args.city
-    total = args.total
-
+def process_city(city: str, total: int):
+    """Process a single city: scrape, dedupe, enrich, and save."""
+    
+    print(f"\n{'='*60}")
+    print(f"Processing city: {city}")
+    print(f"{'='*60}\n")
+    
     # Hardcoded keywords
     keywords = [
         "roofing company",
@@ -247,6 +245,37 @@ def main():
         os.remove(temp_csv)
     if os.path.exists(enriched_path):
         os.remove(enriched_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Scrape and enrich roofing companies data for one or more cities.")
+    parser.add_argument("-c", "--city", type=str, required=True, help="City name(s) to search in. Separate multiple cities with commas (e.g., 'Houston Texas, Miami Florida, New York NY')")
+    parser.add_argument("-t", "--total", type=int, default=100, help="Maximum number of listings to scrape per keyword (default: 100)")
+    args = parser.parse_args()
+
+    # Parse cities - split by comma and strip whitespace
+    cities = [city.strip() for city in args.city.split(',') if city.strip()]
+    total = args.total
+
+    print(f"Cities to process: {cities}")
+    print(f"Max listings per keyword: {total}\n")
+
+    # Process each city sequentially
+    for idx, city in enumerate(cities, 1):
+        print(f"\n{'#'*60}")
+        print(f"City {idx}/{len(cities)}: {city}")
+        print(f"{'#'*60}")
+        
+        try:
+            process_city(city, total)
+            print(f"\n✓ Successfully completed processing for {city}")
+        except Exception as e:
+            print(f"\n✗ Error processing {city}: {e}")
+            print("Continuing to next city...\n")
+    
+    print(f"\n{'='*60}")
+    print(f"All cities processed!")
+    print(f"{'='*60}")
 
 if __name__ == "__main__":
     main()
