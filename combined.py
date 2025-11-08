@@ -213,6 +213,61 @@ def process_city(city: str, total: int):
     # Load the enriched CSV to split and clean
     df_enriched = pd.read_csv(enriched_path)
     
+    # Process Phone columns: ensure +1 prefix and remove duplicates between Phone and Additional Phones
+    def add_plus1(phone_str):
+        """Add +1 prefix to phone number if not present."""
+        if pd.isna(phone_str) or phone_str == '':
+            return ''
+        phone_str = str(phone_str).strip()
+        if not phone_str.startswith('+'):
+            # Remove any non-digit characters first
+            digits = ''.join(filter(str.isdigit, phone_str))
+            if len(digits) == 10:
+                return '+1' + digits
+            elif len(digits) == 11 and digits.startswith('1'):
+                return '+' + digits
+        return phone_str
+    
+    # Add +1 to Phone column
+    if 'Phone' in df_enriched.columns:
+        df_enriched['Phone'] = df_enriched['Phone'].apply(add_plus1)
+    
+    # Process Additional Phones: add +1 and remove duplicates with Phone column
+    if 'Additional Phones' in df_enriched.columns and 'Phone' in df_enriched.columns:
+        def clean_additional_phones(row):
+            main_phone = str(row.get('Phone', '')).strip()
+            addl_phones = str(row.get('Additional Phones', '')).strip()
+            
+            if not addl_phones or addl_phones == 'nan':
+                return ''
+            
+            # Split by comma, add +1, and filter out the main phone
+            phones = [add_plus1(p.strip()) for p in addl_phones.split(',')]
+            phones = [p for p in phones if p and p != main_phone]
+            
+            return ', '.join(phones) if phones else ''
+        
+        df_enriched['Additional Phones'] = df_enriched.apply(clean_additional_phones, axis=1)
+    
+    # Split Email column into Email and Additional Emails
+    if 'Email' in df_enriched.columns:
+        def split_emails(email_str):
+            """Split comma-separated emails into first email and additional emails."""
+            if pd.isna(email_str) or email_str == '':
+                return '', ''
+            
+            emails = [e.strip() for e in str(email_str).split(',') if e.strip()]
+            if not emails:
+                return '', ''
+            elif len(emails) == 1:
+                return emails[0], ''
+            else:
+                return emails[0], ', '.join(emails[1:])
+        
+        df_enriched[['Email', 'Additional Emails']] = df_enriched['Email'].apply(
+            lambda x: pd.Series(split_emails(x))
+        )
+    
     # Remove unwanted columns
     columns_to_remove = ['latitude', 'longitude', 'reviews_count', 'reviews_average']
     df_enriched = df_enriched.drop(columns=[col for col in columns_to_remove if col in df_enriched.columns], errors='ignore')
