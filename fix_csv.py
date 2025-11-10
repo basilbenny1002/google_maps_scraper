@@ -6,12 +6,23 @@ This script processes existing CSV files (output from combined.py) to:
 - Remove duplicate phones between Phone and Additional Phones columns
 - Split Email column into Email and Additional Emails columns
 - Save fixed CSVs to a 'fixed/' folder
+
+USAGE:
+1. Set INPUT_FOLDER below to the folder containing your CSV files
+2. Run: python fix_csv.py
+3. Fixed CSVs will be saved to 'fixed/' folder
 """
 
 import os
-import argparse
 import pandas as pd
 from pathlib import Path
+
+# ============================================================
+# CONFIGURATION - Change these values as needed
+# ============================================================
+INPUT_FOLDER = "output"  # Folder containing CSV files to fix
+OUTPUT_FOLDER = "fixed"  # Folder where fixed CSVs will be saved
+# ============================================================
 
 
 def add_plus1(phone_str):
@@ -109,27 +120,35 @@ def fix_csv(input_path: str, output_dir: str = "fixed") -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Fix CSV files by adding +1 to phones and splitting emails."
-    )
-    parser.add_argument(
-        "-f", "--files",
-        type=str,
-        nargs='+',
-        required=True,
-        help="Paths to CSV files to fix (space-separated)"
-    )
-    parser.add_argument(
-        "-o", "--output",
-        type=str,
-        default="fixed",
-        help="Output directory for fixed CSVs (default: 'fixed')"
-    )
-    args = parser.parse_args()
+    input_dir = INPUT_FOLDER
+    output_dir = OUTPUT_FOLDER
     
-    csv_files = args.files
-    output_dir = args.output
+    print("="*60)
+    print("CSV FIXER SCRIPT")
+    print("="*60)
     
+    # Check if directory exists
+    if not os.path.exists(input_dir):
+        print(f"✗ Directory not found: {input_dir}")
+        print(f"  Please update INPUT_FOLDER in the script to a valid directory.")
+        return
+    
+    if not os.path.isdir(input_dir):
+        print(f"✗ Path is not a directory: {input_dir}")
+        return
+    
+    # Find all CSV files in the directory
+    csv_files = [
+        os.path.join(input_dir, f) 
+        for f in os.listdir(input_dir) 
+        if f.lower().endswith('.csv')
+    ]
+    
+    if not csv_files:
+        print(f"✗ No CSV files found in directory: {input_dir}")
+        return
+    
+    print(f"Input directory: {input_dir}")
     print(f"Files to process: {len(csv_files)}")
     print(f"Output directory: {output_dir}")
     print("="*60)
@@ -138,11 +157,6 @@ def main():
     errors = []
     
     for csv_file in csv_files:
-        if not os.path.exists(csv_file):
-            print(f"\n✗ File not found: {csv_file}")
-            errors.append(csv_file)
-            continue
-        
         try:
             fixed_path = fix_csv(csv_file, output_dir)
             fixed_files.append(fixed_path)
