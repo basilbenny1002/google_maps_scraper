@@ -27,9 +27,14 @@ OUTPUT_FOLDER = "fixed"  # Folder where fixed CSVs will be saved
 
 def add_plus1(phone_str):
     """Add +1 prefix to phone number if not present."""
-    if pd.isna(phone_str) or phone_str == '':
+    if pd.isna(phone_str) or phone_str == '' or str(phone_str).lower() == 'nan':
         return ''
     phone_str = str(phone_str).strip()
+    
+    # Remove .0 if present (from pandas reading as float)
+    if phone_str.endswith('.0'):
+        phone_str = phone_str[:-2]
+    
     if not phone_str.startswith('+'):
         # Remove any non-digit characters first
         digits = ''.join(filter(str.isdigit, phone_str))
@@ -37,6 +42,8 @@ def add_plus1(phone_str):
             return '+1' + digits
         elif len(digits) == 11 and digits.startswith('1'):
             return '+' + digits
+        elif digits:  # Any other digits, try to format
+            return '+1' + digits if len(digits) == 10 else phone_str
     return phone_str
 
 
@@ -53,8 +60,8 @@ def fix_csv(input_path: str, output_dir: str = "fixed") -> str:
     """
     print(f"\nProcessing: {input_path}")
     
-    # Read the CSV
-    df = pd.read_csv(input_path)
+    # Read the CSV with Phone columns as strings to prevent float conversion
+    df = pd.read_csv(input_path, dtype={'Phone': str, 'Additional Phones': str})
     
     # Process Phone columns: ensure +1 prefix and remove duplicates between Phone and Additional Phones
     

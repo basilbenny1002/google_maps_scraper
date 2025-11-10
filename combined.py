@@ -211,14 +211,19 @@ def process_city(city: str, total: int):
     print(f"Enriched data saved to {enriched_path}")
 
     # Load the enriched CSV to split and clean
-    df_enriched = pd.read_csv(enriched_path)
+    df_enriched = pd.read_csv(enriched_path, dtype={'Phone': str, 'Additional Phones': str})
     
     # Process Phone columns: ensure +1 prefix and remove duplicates between Phone and Additional Phones
     def add_plus1(phone_str):
         """Add +1 prefix to phone number if not present."""
-        if pd.isna(phone_str) or phone_str == '':
+        if pd.isna(phone_str) or phone_str == '' or str(phone_str).lower() == 'nan':
             return ''
         phone_str = str(phone_str).strip()
+        
+        # Remove .0 if present (from pandas reading as float)
+        if phone_str.endswith('.0'):
+            phone_str = phone_str[:-2]
+        
         if not phone_str.startswith('+'):
             # Remove any non-digit characters first
             digits = ''.join(filter(str.isdigit, phone_str))
@@ -226,6 +231,8 @@ def process_city(city: str, total: int):
                 return '+1' + digits
             elif len(digits) == 11 and digits.startswith('1'):
                 return '+' + digits
+            elif digits:  # Any other digits, try to format
+                return '+1' + digits if len(digits) == 10 else phone_str
         return phone_str
     
     # Add +1 to Phone column
