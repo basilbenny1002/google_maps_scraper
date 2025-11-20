@@ -280,7 +280,7 @@ def process_city(city: str, total: int):
     df_enriched = df_enriched.drop(columns=[col for col in columns_to_remove if col in df_enriched.columns], errors='ignore')
     
     # Split into chunks of 80 rows
-    chunk_size = 80
+    chunk_size = 100
     total_rows = len(df_enriched)
     num_chunks = (total_rows + chunk_size - 1) // chunk_size  # Ceiling division
     
